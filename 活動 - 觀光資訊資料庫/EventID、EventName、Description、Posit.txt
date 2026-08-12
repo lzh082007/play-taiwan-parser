@@ -1,1 +1,0 @@
-EventID、EventName、Description、PositionLat、PositionLon、ImagesName、ImagesURL、ImagesDescription、TrafficInfo、ParkingInfo、WebsiteURL、StartDateTime、EndDateTime、EventStatus、UpdateTime

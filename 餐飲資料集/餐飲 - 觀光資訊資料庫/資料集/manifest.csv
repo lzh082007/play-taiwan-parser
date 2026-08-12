@@ -1,0 +1,3 @@
+﻿name,schema,description,qcLevel
+RestaurantList.json,schema-RestaurantList.csv,餐飲店家基本資料,/Restaurants
+RestaurantServiceTimeList.json,schema-RestaurantServiceTimeList.csv,餐飲店家營運時間資料,/RestaurantServiceTimes
