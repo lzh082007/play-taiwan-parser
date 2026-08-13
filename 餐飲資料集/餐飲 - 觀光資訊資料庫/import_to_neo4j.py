@@ -71,10 +71,20 @@ class RestaurantNeo4jImporter:
             rest.lon = toFloat($lon),
             rest.website = $website,
             rest.address = $address,
-            rest.weekday_open = $weekday_open,
-            rest.weekday_close = $weekday_close,
-            rest.weekend_open = $weekend_open,
-            rest.weekend_close = $weekend_close
+            rest.monday_open = $monday_open,
+            rest.monday_close = $monday_close,
+            rest.tuesday_open = $tuesday_open,
+            rest.tuesday_close = $tuesday_close,
+            rest.wednesday_open = $wednesday_open,
+            rest.wednesday_close = $wednesday_close,
+            rest.thursday_open = $thursday_open,
+            rest.thursday_close = $thursday_close,
+            rest.friday_open = $friday_open,
+            rest.friday_close = $friday_close,
+            rest.saturday_open = $saturday_open,
+            rest.saturday_close = $saturday_close,
+            rest.sunday_open = $sunday_open,
+            rest.sunday_close = $sunday_close
         """
         
         # 動態寫入 embedding 屬性
@@ -91,10 +101,20 @@ class RestaurantNeo4jImporter:
                lon=r["PositionLon"],
                website=r["WebsiteURL"],
                address=r["StreetAddress"],
-               weekday_open=r.get("WeekdayOpenTime", ""),
-               weekday_close=r.get("WeekdayCloseTime", ""),
-               weekend_open=r.get("WeekendOpenTime", ""),
-               weekend_close=r.get("WeekendCloseTime", ""),
+               monday_open=r.get("MondayOpenTime", ""),
+               monday_close=r.get("MondayCloseTime", ""),
+               tuesday_open=r.get("TuesdayOpenTime", ""),
+               tuesday_close=r.get("TuesdayCloseTime", ""),
+               wednesday_open=r.get("WednesdayOpenTime", ""),
+               wednesday_close=r.get("WednesdayCloseTime", ""),
+               thursday_open=r.get("ThursdayOpenTime", ""),
+               thursday_close=r.get("ThursdayCloseTime", ""),
+               friday_open=r.get("FridayOpenTime", ""),
+               friday_close=r.get("FridayCloseTime", ""),
+               saturday_open=r.get("SaturdayOpenTime", ""),
+               saturday_close=r.get("SaturdayCloseTime", ""),
+               sunday_open=r.get("SundayOpenTime", ""),
+               sunday_close=r.get("SundayCloseTime", ""),
                **{f"{f}_embedding": r.get(f"{f}_embedding") for f in CONFIG["embedding_fields"]})
                
         # 建立 CuisineClasses 關聯
@@ -156,7 +176,8 @@ class RestaurantNeo4jImporter:
             """)
 
 def main():
-    base_dir = r"C:\Users\lzh08\OneDrive\桌面\日遊所思夜遊所夢資料集\餐飲資料集"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = script_dir
     json_file = os.path.join(base_dir, "cleaned_restaurants.json")
     
     if not os.path.exists(json_file):
