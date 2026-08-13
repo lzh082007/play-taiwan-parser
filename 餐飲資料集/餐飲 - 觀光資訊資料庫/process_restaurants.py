@@ -30,20 +30,32 @@ def clean_address(city, town, address):
         address = address[len(town):]
     return address.strip()
 
-def extract_service_times(info_str):
-    if not info_str:
-        return "", "", "", ""
+def parse_weekly_service_times(info_str):
+    if not info_str or not str(info_str).strip():
+        return None, "Empty value"
+        
+    info_str = str(info_str).strip()
+    
+    # Check for times
+    times = re.findall(r'(\d{1,2}:\d{2})', info_str)
+    if not times:
+        if "24小時" in info_str or "24 hours" in info_str:
+            res = {}
+            for d in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]:
+                res[d] = {"open": "00:00", "close": "23:59"}
+            return res, ""
+        return None, "No time format (HH:MM) found"
         
     def get_open_close(text):
-        times = re.findall(r'(\d{1,2}:\d{2})', text)
-        if not times:
+        t_list = re.findall(r'(\d{1,2}:\d{2})', text)
+        if not t_list:
             return "", ""
         parsed_times = []
-        for t in times:
+        for t in t_list:
             try:
                 parts = t.split(':')
                 h, m = int(parts[0]), int(parts[1])
-                parsed_times.append((h, m, t))
+                parsed_times.append((h, m, f"{h:02d}:{m:02d}"))
             except:
                 continue
         if not parsed_times:
@@ -51,19 +63,23 @@ def extract_service_times(info_str):
         parsed_times.sort()
         return parsed_times[0][2], parsed_times[-1][2]
 
+    # Check for complex specific days with multiple different time intervals
+    distinct_times = set(times)
+    has_specific_days = any(k in info_str for k in ["星期", "週一", "週二", "週三", "週四", "週五", "週六", "週日", "禮拜"])
+    
+    if has_specific_days and len(distinct_times) > 2:
+        return None, "Complex format with multiple specific day times"
+
     weekday_text = info_str
     weekend_text = info_str
     
-    # 若字串中包含區分平假日的關鍵字，進行切分
-    if any(k in info_str for k in ["假日", "週末", "平日"]):
-        # 利用 regex 切割出包含假日相關字眼的段落
+    if any(k in info_str for k in ["假日", "週末", "平日", "例假日"]):
         parts = re.split(r'(假日|週末|週六|週日|例假日)', info_str)
         weekend_idx = -1
         for i, p in enumerate(parts):
             if p in ["假日", "週末", "週六", "週日", "例假日"]:
                 weekend_idx = i
                 break
-        
         if weekend_idx != -1:
             weekday_text = "".join(parts[:weekend_idx])
             weekend_text = "".join(parts[weekend_idx:])
@@ -71,21 +87,41 @@ def extract_service_times(info_str):
     wd_open, wd_close = get_open_close(weekday_text)
     we_open, we_close = get_open_close(weekend_text)
     
-    # 若某一方沒有解析到時間，則共用解析到的時間
+    if not wd_open and not we_open:
+        return None, "Failed to parse time"
+        
     if not wd_open and we_open:
         wd_open, wd_close = we_open, we_close
     elif not we_open and wd_open:
         we_open, we_close = wd_open, wd_close
         
-    return wd_open, wd_close, we_open, we_close
+    # Detect explicit closed days
+    closed_days = set()
+    for day_name, idx in [("一", 0), ("二", 1), ("三", 2), ("四", 3), ("五", 4), ("六", 5), ("日", 6)]:
+        if re.search(f"(星期|週|禮拜){day_name}?[^\d]*(公休|休息|休館|未營業)", info_str):
+            closed_days.add(idx)
+
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    res = {}
+    for i, d in enumerate(days):
+        if i in closed_days:
+            res[d] = {"open": "", "close": ""}
+        elif i < 5:
+            res[d] = {"open": wd_open, "close": wd_close}
+        else:
+            res[d] = {"open": we_open, "close": we_close}
+            
+    return res, ""
 
 def main():
     print(f"載入 Embedding 模型: {CONFIG['embedding_model']} ...")
     model = SentenceTransformer(CONFIG['embedding_model'])
     
-    base_dir = r"C:\Users\lzh08\OneDrive\桌面\日遊所思夜遊所夢資料集\餐飲資料集"
-    input_file = os.path.join(base_dir, r"餐飲 - 觀光資訊資料庫\資料集\RestaurantList.json")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = script_dir
+    input_file = os.path.join(base_dir, "資料集", "RestaurantList.json")
     output_file = os.path.join(base_dir, "cleaned_restaurants.json")
+    report_file = os.path.join(base_dir, "cleaning_report.json")
     
     print(f"讀取原始資料: {input_file}")
     # 使用 utf-8-sig 來避開 BOM 錯誤
@@ -94,6 +130,7 @@ def main():
         
     restaurants = data.get("Restaurants", [])
     cleaned_restaurants = []
+    cleaning_report = []
     
     print(f"開始處理 {len(restaurants)} 筆餐廳資料...")
     for i, r in enumerate(restaurants):
@@ -103,9 +140,21 @@ def main():
         lat = r.get("PositionLat")
         lon = r.get("PositionLon")
         website = r.get("WebsiteURL", "")
+        service_time_info = r.get("ServiceTimeInfo", "")
         
-        # 解析平日與假日的開門與關門時間
-        wd_open, wd_close, we_open, we_close = extract_service_times(r.get("ServiceTimeInfo", ""))
+        # 解析週一至週日的開門與關門時間
+        weekly_times, error_msg = parse_weekly_service_times(service_time_info)
+        
+        if not weekly_times:
+            # 格式不符或為空，加入清洗報告
+            cleaning_report.append({
+                "RestaurantID": r_id,
+                "RestaurantName": r_name,
+                "ServiceTimeInfo": service_time_info,
+                "ErrorReason": error_msg
+            })
+            # 提供預設空值
+            weekly_times = {d: {"open": "", "close": ""} for d in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]}
         
         postal = r.get("PostalAddress", {})
         city = postal.get("City", "")
@@ -141,10 +190,20 @@ def main():
             "PositionLat": lat,
             "PositionLon": lon,
             "WebsiteURL": website,
-            "WeekdayOpenTime": wd_open,
-            "WeekdayCloseTime": wd_close,
-            "WeekendOpenTime": we_open,
-            "WeekendCloseTime": we_close,
+            "MondayOpenTime": weekly_times["Monday"]["open"],
+            "MondayCloseTime": weekly_times["Monday"]["close"],
+            "TuesdayOpenTime": weekly_times["Tuesday"]["open"],
+            "TuesdayCloseTime": weekly_times["Tuesday"]["close"],
+            "WednesdayOpenTime": weekly_times["Wednesday"]["open"],
+            "WednesdayCloseTime": weekly_times["Wednesday"]["close"],
+            "ThursdayOpenTime": weekly_times["Thursday"]["open"],
+            "ThursdayCloseTime": weekly_times["Thursday"]["close"],
+            "FridayOpenTime": weekly_times["Friday"]["open"],
+            "FridayCloseTime": weekly_times["Friday"]["close"],
+            "SaturdayOpenTime": weekly_times["Saturday"]["open"],
+            "SaturdayCloseTime": weekly_times["Saturday"]["close"],
+            "SundayOpenTime": weekly_times["Sunday"]["open"],
+            "SundayCloseTime": weekly_times["Sunday"]["close"],
             "StreetAddress": address,
             "City": city,
             "Town": town,
@@ -165,6 +224,13 @@ def main():
     print(f"寫入清洗後資料至: {output_file}")
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(cleaned_restaurants, f, ensure_ascii=False, indent=2)
+        
+    if cleaning_report:
+        print(f"發現 {len(cleaning_report)} 筆資料需手動清洗，寫入清洗報告至: {report_file}")
+        with open(report_file, 'w', encoding='utf-8') as f:
+            json.dump(cleaning_report, f, ensure_ascii=False, indent=2)
+    else:
+        print("所有資料皆成功解析，無須人工清洗！")
         
     print("處理完成！請接著執行 import_to_neo4j.py 將其匯入 Neo4j")
 
