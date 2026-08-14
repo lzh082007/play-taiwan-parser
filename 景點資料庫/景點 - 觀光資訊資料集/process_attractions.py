@@ -48,6 +48,22 @@ def clean_address(address, city, town):
         address = address[len(town):]
     return address.strip()
 
+def parse_service_time(time_str):
+    """
+    營業時間統一欄位，包含週一至週日，並考慮一天開放兩個時段。
+    建立預設的 JSON 格式讓後續可以手動填空。
+    """
+    template = {
+        "Monday": [{"open": "", "close": ""}, {"open": "", "close": ""}],
+        "Tuesday": [{"open": "", "close": ""}, {"open": "", "close": ""}],
+        "Wednesday": [{"open": "", "close": ""}, {"open": "", "close": ""}],
+        "Thursday": [{"open": "", "close": ""}, {"open": "", "close": ""}],
+        "Friday": [{"open": "", "close": ""}, {"open": "", "close": ""}],
+        "Saturday": [{"open": "", "close": ""}, {"open": "", "close": ""}],
+        "Sunday": [{"open": "", "close": ""}, {"open": "", "close": ""}]
+    }
+    return template
+
 def process_data(input_file, output_file):
     print("讀取原始 JSON 資料...")
     with open(input_file, 'r', encoding='utf-8-sig') as f:
@@ -100,6 +116,9 @@ def process_data(input_file, output_file):
             new_a["DescriptionEmbedding"] = embeddings[i].tolist()
         else:
             new_a["DescriptionEmbedding"] = None
+            
+        # 6. 處理營業時間 (ServiceTimeInfo)
+        new_a["ServiceTimeInfo"] = parse_service_time(new_a.get("ServiceTimeInfo", ""))
             
         processed_attractions.append(new_a)
         
