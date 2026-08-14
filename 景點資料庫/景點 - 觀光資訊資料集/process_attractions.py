@@ -50,7 +50,7 @@ def clean_address(address, city, town):
 
 def process_data(input_file, output_file):
     print("讀取原始 JSON 資料...")
-    with open(input_file, 'r', encoding='utf-8') as f:
+    with open(input_file, 'r', encoding='utf-8-sig') as f:
         data = json.load(f)
     
     attractions = data.get("Attractions", [])
@@ -110,7 +110,7 @@ def process_data(input_file, output_file):
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    input_json = os.path.join(script_dir, r"景點 - 觀光資訊資料集\AttractionList.json")
+    input_json = os.path.join(script_dir, r"資料集\AttractionList.json")
     output_json = os.path.join(script_dir, "cleaned_attractions.json")
     
     if os.path.exists(input_json):

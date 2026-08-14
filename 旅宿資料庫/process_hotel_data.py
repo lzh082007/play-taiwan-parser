@@ -7,7 +7,7 @@ from sentence_transformers import SentenceTransformer
 # 並設定使用 GPU (CUDA) 執行
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device} for embedding model.")
-model = SentenceTransformer("intfloat/multilingual-e5-large", device=device)
+model = SentenceTransformer("intfloat/multilingual-e5-large", device=device, model_kwargs={"use_safetensors": True})
 
 def get_hotel_class_name(class_codes):
     """
@@ -65,7 +65,7 @@ def clean_address(address, city, town):
 
 def process_data(input_file, output_file):
     print("讀取原始 JSON 資料...")
-    with open(input_file, 'r', encoding='utf-8') as f:
+    with open(input_file, 'r', encoding='utf-8-sig') as f:
         data = json.load(f)
     
     hotels = data.get("Hotels", [])
@@ -121,7 +121,7 @@ def process_data(input_file, output_file):
 
 if __name__ == "__main__":
     import os
-    base_dir = r"C:\Users\lzh08\OneDrive\桌面\日遊所思夜遊所夢資料集\旅宿資料庫"
+    base_dir = r"C:\Users\USER\Desktop\play-taiwan-parser\旅宿資料庫"
     input_json = os.path.join(base_dir, r"Hotel-json\HotelList.json")
     output_json = os.path.join(base_dir, "cleaned_hotels.json")
     process_data(input_json, output_json)

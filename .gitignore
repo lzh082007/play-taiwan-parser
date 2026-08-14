@@ -1,2 +1,6 @@
 venv/
 __pycache__/
+資料集/
+dumps/
+cleaned_*.json
+**/cleaned_*.json
