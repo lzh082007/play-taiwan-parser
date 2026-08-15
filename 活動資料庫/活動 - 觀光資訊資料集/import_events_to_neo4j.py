@@ -120,12 +120,18 @@ def clean_event(raw: dict) -> Optional[dict]:
         elif (e - s).days > 365:
             logger.warning(f"[{event_id}] 活動期間超過一年，建議人工複查: {start_dt} ~ {end_dt}")
 
+    postal = raw.get("PostalAddress", {})
+    city = postal.get("City", "")
+    town = postal.get("Town", "")
+
     return {
         "eventId": event_id,
         "name": clean_str(raw.get("EventName")),
         "description": clean_str(raw.get("Description")),
         "lat": lat,
         "lon": lon,
+        "city": city,
+        "town": town,
         "images": images_list,
         "trafficInfo": clean_str(raw.get("TrafficInfo")),
         "parkingInfo": clean_str(raw.get("ParkingInfo")),
@@ -282,6 +288,19 @@ SET
     e.DescriptionEmbedding = row.DescriptionEmbedding,
     e.SourceDataset = '觀光資訊'
 
+WITH e, row
+CALL {
+    WITH e, row
+    WITH e, row WHERE row.city IS NOT NULL AND row.city <> ''
+    MERGE (c:City {name: row.city})
+    MERGE (e)-[:LOCATED_IN_CITY]->(c)
+    WITH e, row, c
+    WHERE row.town IS NOT NULL AND row.town <> ''
+    MERGE (t:Town {name: row.town})
+    MERGE (e)-[:LOCATED_IN_TOWN]->(t)
+    MERGE (t)-[:PART_OF]->(c)
+}
+
 WITH e, row.images AS images
 UNWIND images AS img
 MERGE (i:Image {ImageURL: img.ImageURL})
@@ -318,7 +337,7 @@ def main():
     neo4j_uri = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
     neo4j_user = os.environ.get("NEO4J_USER", "neo4j")
     neo4j_password = os.environ.get("NEO4J_PASSWORD", "Playtaiwan2026Playtaiwan2026")
-    neo4j_database = os.environ.get("NEO4J_DATABASE", "events")  # 改成你建立的活動 database 名稱
+    neo4j_database = os.environ.get("NEO4J_DATABASE", "event")  # 改成你建立的活動 database 名稱
 
     if not neo4j_password:
         logger.error("請設定環境變數 NEO4J_PASSWORD 後再執行")

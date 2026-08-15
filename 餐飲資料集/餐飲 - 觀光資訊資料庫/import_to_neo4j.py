@@ -52,7 +52,7 @@ class RestaurantNeo4jImporter:
         print("建立約束 (Constraints)...")
         queries = [
             "CREATE CONSTRAINT IF NOT EXISTS FOR (r:Restaurant) REQUIRE r.id IS UNIQUE",
-            "CREATE CONSTRAINT IF NOT EXISTS FOR (c:Cuisine) REQUIRE c.id IS UNIQUE",
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (c:Cuisine) REQUIRE c.name IS UNIQUE",
             "CREATE CONSTRAINT IF NOT EXISTS FOR (ct:City) REQUIRE ct.name IS UNIQUE",
             "CREATE CONSTRAINT IF NOT EXISTS FOR (t:Town) REQUIRE t.name IS UNIQUE",
             "CREATE CONSTRAINT IF NOT EXISTS FOR (i:Image) REQUIRE i.id IS UNIQUE"
@@ -70,21 +70,7 @@ class RestaurantNeo4jImporter:
             rest.lat = toFloat($lat),
             rest.lon = toFloat($lon),
             rest.website = $website,
-            rest.address = $address,
-            rest.monday_open = $monday_open,
-            rest.monday_close = $monday_close,
-            rest.tuesday_open = $tuesday_open,
-            rest.tuesday_close = $tuesday_close,
-            rest.wednesday_open = $wednesday_open,
-            rest.wednesday_close = $wednesday_close,
-            rest.thursday_open = $thursday_open,
-            rest.thursday_close = $thursday_close,
-            rest.friday_open = $friday_open,
-            rest.friday_close = $friday_close,
-            rest.saturday_open = $saturday_open,
-            rest.saturday_close = $saturday_close,
-            rest.sunday_open = $sunday_open,
-            rest.sunday_close = $sunday_close
+            rest.address = $address
         """
         
         # 動態寫入 embedding 屬性
@@ -101,29 +87,37 @@ class RestaurantNeo4jImporter:
                lon=r["PositionLon"],
                website=r["WebsiteURL"],
                address=r["StreetAddress"],
-               monday_open=r.get("MondayOpenTime", ""),
-               monday_close=r.get("MondayCloseTime", ""),
-               tuesday_open=r.get("TuesdayOpenTime", ""),
-               tuesday_close=r.get("TuesdayCloseTime", ""),
-               wednesday_open=r.get("WednesdayOpenTime", ""),
-               wednesday_close=r.get("WednesdayCloseTime", ""),
-               thursday_open=r.get("ThursdayOpenTime", ""),
-               thursday_close=r.get("ThursdayCloseTime", ""),
-               friday_open=r.get("FridayOpenTime", ""),
-               friday_close=r.get("FridayCloseTime", ""),
-               saturday_open=r.get("SaturdayOpenTime", ""),
-               saturday_close=r.get("SaturdayCloseTime", ""),
-               sunday_open=r.get("SundayOpenTime", ""),
-               sunday_close=r.get("SundayCloseTime", ""),
                **{f"{f}_embedding": r.get(f"{f}_embedding") for f in CONFIG["embedding_fields"]})
                
+        # 建立 OperatingHours 關聯
+        service_time = r.get("ServiceTimeInfo", {})
+        if isinstance(service_time, dict):
+            for day, times in service_time.items():
+                if isinstance(times, dict):
+                    times = [times]
+                if not isinstance(times, list):
+                    continue
+                for t in times:
+                    if not isinstance(t, dict):
+                        continue
+                    open_time = t.get("open", "").strip()
+                    close_time = t.get("close", "").strip()
+                    if open_time and close_time:
+                        tx.run("""
+                        MATCH (rest:Restaurant {id: $rest_id})
+                        MERGE (o:OperatingHours {dayOfWeek: $day, openTime: $open_time, closeTime: $close_time})
+                        MERGE (rest)-[:HAS_OPERATING_HOURS]->(o)
+                        """, rest_id=r["RestaurantID"], day=day, open_time=open_time, close_time=close_time)
+
         # 建立 CuisineClasses 關聯
-        for cuisine_id in r.get("CuisineClasses", []):
+        for cuisine_name in r.get("CuisineClasses", []):
+            if not cuisine_name:
+                continue
             tx.run("""
             MATCH (rest:Restaurant {id: $rest_id})
-            MERGE (c:Cuisine {id: $cuisine_id})
+            MERGE (c:Cuisine {name: $cuisine_name})
             MERGE (rest)-[:HAS_CUISINE]->(c)
-            """, rest_id=r["RestaurantID"], cuisine_id=str(cuisine_id))
+            """, rest_id=r["RestaurantID"], cuisine_name=cuisine_name)
             
         # 建立 City 關聯
         if r.get("City"):

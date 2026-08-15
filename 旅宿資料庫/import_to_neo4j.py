@@ -67,8 +67,7 @@ class HotelNeo4jImporter:
             hotel.address = $address,
             hotel.lowest_price = toInteger($lowest_price),
             hotel.ceiling_price = toInteger($ceiling_price),
-            hotel.update_time = $update_time,
-            hotel.service_time_info = $service_time_info
+            hotel.update_time = $update_time
         """
         
         # 若有座標，加入空間地理資料型別 (Point)
@@ -89,9 +88,22 @@ class HotelNeo4jImporter:
                lowest_price=h.get("LowestPrice"),
                ceiling_price=h.get("CeilingPrice"),
                update_time=h.get("UpdateTime"),
-               service_time_info=json.dumps(h.get("ServiceTimeInfo", {}), ensure_ascii=False),
                desc_emb=h.get("DescriptionEmbedding"))
                
+        # 建立 OperatingHours 關聯
+        service_time = h.get("ServiceTimeInfo", {})
+        if isinstance(service_time, dict):
+            for day, times in service_time.items():
+                for t in times:
+                    open_time = t.get("open", "").strip()
+                    close_time = t.get("close", "").strip()
+                    if open_time and close_time:
+                        tx.run("""
+                        MATCH (hotel:Hotel {id: $hotel_id})
+                        MERGE (o:OperatingHours {dayOfWeek: $day, openTime: $open_time, closeTime: $close_time})
+                        MERGE (hotel)-[:HAS_OPERATING_HOURS]->(o)
+                        """, hotel_id=h["HotelID"], day=day, open_time=open_time, close_time=close_time)
+
         # 建立 HotelClasses 關聯
         for class_name in h.get("HotelClasses", []):
             tx.run("""

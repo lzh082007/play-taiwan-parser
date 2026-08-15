@@ -105,13 +105,26 @@ def parse_weekly_service_times(info_str):
     res = {}
     for i, d in enumerate(days):
         if i in closed_days:
-            res[d] = {"open": "", "close": ""}
+            res[d] = [{"open": "", "close": ""}, {"open": "", "close": ""}]
         elif i < 5:
-            res[d] = {"open": wd_open, "close": wd_close}
+            res[d] = [{"open": wd_open, "close": wd_close}, {"open": "", "close": ""}]
         else:
-            res[d] = {"open": we_open, "close": we_close}
+            res[d] = [{"open": we_open, "close": we_close}, {"open": "", "close": ""}]
             
     return res, ""
+
+def get_cuisine_class_name(codes):
+    cuisine_map = {
+        1: '台灣小吃/台菜', 2: '中式料理', 3: '港式料理', 4: '日式料理', 5: '韓式料理',
+        96: '南亞料理', 97: '東南亞料理', 98: '美式/歐式料理', 99: '其他異國料理',
+        100: '夜市小吃', 101: '甜點冰品', 102: '麵包糕點', 103: '非酒精飲品',
+        104: '酒類飲品', 105: '燒烤/鐵板燒', 106: '火鍋', 107: '海鮮', 108: '牛排',
+        109: '速食', 110: '連鎖餐飲', 111: '吃到飽', 112: '便當/自助餐',
+        113: '牛肉麵', 114: '粥品', 115: '地方特產', 116: '伴手禮/禮盒',
+        200: '純素飲食', 201: '素食飲食', 202: '清真飲食', 203: '無麩質飲食',
+        204: '健康飲食', 254: '其他'
+    }
+    return [cuisine_map.get(c, f"料理類別_{c}") for c in codes]
 
 def main():
     print(f"載入 Embedding 模型: {CONFIG['embedding_model']} ...")
@@ -154,7 +167,7 @@ def main():
                 "ErrorReason": error_msg
             })
             # 提供預設空值
-            weekly_times = {d: {"open": "", "close": ""} for d in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]}
+            weekly_times = {d: [{"open": "", "close": ""}, {"open": "", "close": ""}] for d in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]}
         
         postal = r.get("PostalAddress", {})
         city = postal.get("City", "")
@@ -181,7 +194,8 @@ def main():
                 "url": img_url
             })
             
-        cuisines = r.get("CuisineClasses", [])
+        raw_cuisines = r.get("CuisineClasses", [])
+        cuisines = get_cuisine_class_name(raw_cuisines)
         
         new_r = {
             "RestaurantID": r_id,
@@ -190,20 +204,7 @@ def main():
             "PositionLat": lat,
             "PositionLon": lon,
             "WebsiteURL": website,
-            "MondayOpenTime": weekly_times["Monday"]["open"],
-            "MondayCloseTime": weekly_times["Monday"]["close"],
-            "TuesdayOpenTime": weekly_times["Tuesday"]["open"],
-            "TuesdayCloseTime": weekly_times["Tuesday"]["close"],
-            "WednesdayOpenTime": weekly_times["Wednesday"]["open"],
-            "WednesdayCloseTime": weekly_times["Wednesday"]["close"],
-            "ThursdayOpenTime": weekly_times["Thursday"]["open"],
-            "ThursdayCloseTime": weekly_times["Thursday"]["close"],
-            "FridayOpenTime": weekly_times["Friday"]["open"],
-            "FridayCloseTime": weekly_times["Friday"]["close"],
-            "SaturdayOpenTime": weekly_times["Saturday"]["open"],
-            "SaturdayCloseTime": weekly_times["Saturday"]["close"],
-            "SundayOpenTime": weekly_times["Sunday"]["open"],
-            "SundayCloseTime": weekly_times["Sunday"]["close"],
+            "ServiceTimeInfo": weekly_times,
             "StreetAddress": address,
             "City": city,
             "Town": town,

@@ -67,8 +67,7 @@ class AttractionNeo4jImporter:
             attr.address = $address,
             attr.update_time = $update_time,
             attr.ticket_info = $ticket_info,
-            attr.travel_info = $travel_info,
-            attr.service_time_info = $service_time_info
+            attr.travel_info = $travel_info
         """
         
         # 若有座標，加入空間地理資料型別 (Point)
@@ -89,9 +88,22 @@ class AttractionNeo4jImporter:
                update_time=a.get("UpdateTime", ""),
                ticket_info=a.get("TicketInfo", ""),
                travel_info=a.get("TravelInfo", ""),
-               service_time_info=a.get("ServiceTimeInfo", ""),
                desc_emb=a.get("DescriptionEmbedding"))
                
+        # 建立 OperatingHours 關聯
+        service_time = a.get("ServiceTimeInfo", {})
+        if isinstance(service_time, dict):
+            for day, times in service_time.items():
+                for t in times:
+                    open_time = t.get("open", "").strip()
+                    close_time = t.get("close", "").strip()
+                    if open_time and close_time:
+                        tx.run("""
+                        MATCH (attr:Attraction {id: $attr_id})
+                        MERGE (o:OperatingHours {dayOfWeek: $day, openTime: $open_time, closeTime: $close_time})
+                        MERGE (attr)-[:HAS_OPERATING_HOURS]->(o)
+                        """, attr_id=a["AttractionID"], day=day, open_time=open_time, close_time=close_time)
+
         # 建立 AttractionClasses 關聯 (已轉為明碼)
         for class_name in a.get("AttractionClasses", []):
             tx.run("""
@@ -135,6 +147,16 @@ class AttractionNeo4jImporter:
             SET i.name = $img_name, i.url = $img_url, i.description = $img_desc
             MERGE (attr)-[:HAS_IMAGE]->(i)
             """, attr_id=a["AttractionID"], img_id=img_id, img_name=img.get("Name", ""), img_url=img_url, img_desc=img.get("Description", ""))
+            
+        # 建立 Tags 關聯
+        for tag in a.get("Tags", []):
+            if not tag:
+                continue
+            tx.run("""
+            MATCH (attr:Attraction {id: $attr_id})
+            MERGE (t:Tag {name: $tag_name})
+            MERGE (attr)-[:HAS_TAG]->(t)
+            """, attr_id=a["AttractionID"], tag_name=tag)
 
     def _create_vector_index(self, session):
         print("建立 Vector Index...")
