@@ -1,87 +1,114 @@
-# 餐廳資料庫標準欄位與資料格式 (Restaurant Database Schema)
+# 觀光資訊資料庫 - 餐飲 (Restaurant) Neo4j 圖形資料庫 Schema
 
-此文件定義了台灣觀光餐飲資料匯入至 Neo4j 圖形資料庫時，所採用的標準化欄位與資料格式。透過將營業時間拆分為週一至週日，使得資料庫能夠更精確地支援「今天/某天是否有營業」等進階查詢。
+此文件定義了台灣觀光餐飲資料匯入至 Neo4j 圖形資料庫時，所採用的標準化欄位與節點關聯格式。
+(註：依需求，此版本不包含匯入腳本，僅專注於資料庫結構與串接規範。)
 
-## 核心節點 (Restaurant Node)
+## 1. 系統環境與套件需求 (Dependencies & Models)
+- **Neo4j 套件**: `APOC (Awesome Procedures On Cypher)` - 必備，用於處理複雜的關聯建立與屬性型別轉換。
+- **Python 套件**: `sentence-transformers`, `torch`
+- **Embedding 模型**: `intfloat/multilingual-e5-large` (1024維) - 負責將餐廳描述文本轉為向量，以支援語意搜尋與 RAG 推薦系統。
 
-代表一間餐廳的實體。
+## 2. Neo4j 節點欄位定義 (Node Properties)
 
-| 欄位名稱 (Property) | 資料型別 (Type) | 說明 (Description) | 範例 (Example) |
-| :--- | :--- | :--- | :--- |
-| `id` | String | 餐廳唯一識別碼 (Primary Key) | `"C1_315080000H_000001"` |
-| `name` | String | 餐廳名稱 | `"鼎泰豐 (信義店)"` |
-| `description` | String | 餐廳介紹與描述 | `"以小籠包聞名全球的台灣小吃..."` |
-| `lat` | Float | 緯度 (WGS84) | `25.033611` |
-| `lon` | Float | 經度 (WGS84) | `121.565000` |
-| `website` | String | 官方網站網址 | `"https://www.dintaifung.com.tw/"` |
-| `address` | String | 街道地址 (不含縣市鄉鎮區) | `"信義路二段194號"` |
-| `Description_embedding` | List[Float] | 介紹文本的向量表示 (1024 維)，用於語意搜尋 | `[0.012, -0.045, ...]` |
+以下為餐飲資料庫在 Neo4j 中的節點與欄位詳細說明。
 
-### 營業時間欄位 (Open/Close Times)
-所有時間格式皆標準化為 `HH:MM` (24 小時制)。若該日未營業或查無資料，則對應欄位會是空字串 `""`。
+### 主節點：餐廳 `(:Restaurant)`
+| 欄位名稱 (Property) | 說明 (Description) |
+| :--- | :--- |
+| `id` | 餐廳唯一識別碼 (PK) |
+| `name` | 餐廳名稱 |
+| `description` | 餐廳介紹與描述 |
+| `lat` | 緯度 |
+| `lon` | 經度 |
+| `website` | 官方網站網址 |
+| `address` | 街道地址 |
+| `Description_embedding` | 介紹文本的向量表示 (1024 維) |
 
-| 欄位名稱 (Property) | 資料型別 (Type) | 說明 (Description) | 範例 (Example) |
-| :--- | :--- | :--- | :--- |
-| `monday_open` | String | 週一開門時間 | `"09:00"` |
-| `monday_close` | String | 週一關門時間 | `"21:00"` |
-| `tuesday_open` | String | 週二開門時間 | `"09:00"` |
-| `tuesday_close` | String | 週二關門時間 | `"21:00"` |
-| `wednesday_open` | String | 週三開門時間 | `""` (公休) |
-| `wednesday_close` | String | 週三關門時間 | `""` (公休) |
-| `thursday_open` | String | 週四開門時間 | `"09:00"` |
-| `thursday_close` | String | 週四關門時間 | `"21:00"` |
-| `friday_open` | String | 週五開門時間 | `"09:00"` |
-| `friday_close` | String | 週五關門時間 | `"21:30"` |
-| `saturday_open` | String | 週六開門時間 | `"10:00"` |
-| `saturday_close` | String | 週六關門時間 | `"22:00"` |
-| `sunday_open` | String | 週日開門時間 | `"10:00"` |
-| `sunday_close` | String | 週日關門時間 | `"22:00"` |
+### 關聯節點
+營業時間、分類與地理位置在 Neo4j 中會被拆分為獨立節點，並與主節點建立關聯。
 
----
+| 目標節點 (Target Node) | 欄位名稱 (Property) | 建立之關聯 (Relationship) |
+| :--- | :--- | :--- |
+| `(:OperatingHours)` | `dayOfWeek`, `openTime`, `closeTime` | `(Restaurant)-[:HAS_OPERATING_HOURS]->(OperatingHours)` |
+| `(:Cuisine)` | `name` | `(Restaurant)-[:HAS_CUISINE]->(Cuisine)` |
+| `(:City)` | `name` | `(Restaurant)-[:LOCATED_IN_CITY]->(City)` |
+| `(:Town)` | `name` | `(Restaurant)-[:LOCATED_IN_TOWN]->(Town)` |
+| `(:Image)` | `id`, `url`, `name`, `description` | `(Restaurant)-[:HAS_IMAGE]->(Image)` |
 
-## 關聯實體與關係 (Relationships & Entities)
+## 3. 關聯 (Relationships) 詳細描述
 
-除了餐廳主體外，資料庫透過以下節點建立知識圖譜關聯：
+透過圖形資料庫的關聯，可以實作強大的推薦與檢索功能。以下為關聯設計的詳細說明：
 
-### 1. 菜系/料理分類 (Cuisine)
-* **節點標籤**: `Cuisine`
-* **欄位**:
-  * `id`: String (例如 `"Cuisine_01"`)
-* **關聯**: `(Restaurant)-[:HAS_CUISINE]->(Cuisine)`
+```mermaid
+erDiagram
+    Restaurant ||--o{ OperatingHours : "HAS_OPERATING_HOURS"
+    Restaurant ||--o{ Cuisine : "HAS_CUISINE"
+    Restaurant ||--|| City : "LOCATED_IN_CITY"
+    Restaurant ||--|| Town : "LOCATED_IN_TOWN"
+    Town ||--|| City : "PART_OF"
+    Restaurant ||--o{ Image : "HAS_IMAGE"
+```
 
-### 2. 縣市 (City)
-* **節點標籤**: `City`
-* **欄位**:
-  * `name`: String (唯一值，例如 `"臺北市"`)
-* **關聯**: `(Restaurant)-[:LOCATED_IN_CITY]->(City)`
+### `(Restaurant)-[:HAS_CUISINE]->(Cuisine)`
+* **說明**: 將餐廳與其提供的料理類型綁定。一間餐廳可以關聯到多個 Cuisine 節點。
+* **應用場景**: 尋找特定料理分類的餐廳推薦，或當使用者搜尋「想吃日式料理」時進行關聯尋找。
+* **Cypher 查詢範例**:
+  ```cypher
+  MATCH (r:Restaurant)-[:HAS_CUISINE]->(c:Cuisine {name: '日式料理'})
+  RETURN r.name, r.address
+  ```
 
-### 3. 鄉鎮市區 (Town)
-* **節點標籤**: `Town`
-* **欄位**:
-  * `name`: String (唯一值，例如 `"大安區"`)
-* **關聯**: 
-  * `(Restaurant)-[:LOCATED_IN_TOWN]->(Town)`
-  * `(Town)-[:PART_OF]->(City)`
+### 地理關聯： `LOCATED_IN_CITY`, `LOCATED_IN_TOWN`, `PART_OF`
+* **說明**: 
+  - `(Restaurant)-[:LOCATED_IN_CITY]->(City)`: 標示所屬縣市
+  - `(Restaurant)-[:LOCATED_IN_TOWN]->(Town)`: 標示所屬鄉鎮
+  - `(Town)-[:PART_OF]->(City)`: 建構台灣行政區地理階層
+* **應用場景**: 若開發者需要依據使用者的選擇尋找某行政區內的餐廳，利用此關聯可以輕易達成過濾與範圍搜尋。
+* **Cypher 查詢範例** (尋找大安區的餐廳):
+  ```cypher
+  MATCH (r:Restaurant)-[:LOCATED_IN_TOWN]->(t:Town {name: '大安區'}) 
+  RETURN r.name, r.address
+  ```
 
-### 4. 圖片 (Image)
-* **節點標籤**: `Image`
-* **欄位**:
-  * `id`: String (圖片的 MD5 Hash 或原生 ID)
-  * `name`: String (圖片名稱)
-  * `url`: String (圖片完整網址)
-  * `description`: String (圖片描述)
-* **關聯**: `(Restaurant)-[:HAS_IMAGE]->(Image)`
+### `(Restaurant)-[:HAS_OPERATING_HOURS]->(OperatingHours)`
+* **說明**: 關聯每天的服務時段。
+* **應用場景**: 讓前端呈現每週營業時段。
 
----
+### `(Restaurant)-[:HAS_IMAGE]->(Image)`
+* **說明**: 連結餐廳與其相關照片。
+* **應用場景**: 在前端卡片元件中提取第一張照片作為餐廳封面。
+* **Cypher 查詢範例**:
+  ```cypher
+  MATCH (r:Restaurant {name: '鼎泰豐'})-[:HAS_IMAGE]->(i:Image)
+  RETURN i.url
+  ```
 
-## 清洗報告格式 (Cleaning Report)
+## 4. 進階測試指令集 (Advanced Query Examples)
 
-當原始資料的 `ServiceTimeInfo` (營業時間) 格式過於複雜、不合規或為空，無法自動轉換為週一至週日獨立欄位時，系統會將該筆紀錄輸出至 `cleaning_report.json` 中，以便人工補齊。
+為了方便串接人員測試進階檢索功能，以下提供**空間搜尋** (Spatial Search) 與**語意搜尋** (Semantic Search) 的 Cypher 指令範例：
 
-**清洗報告欄位**:
-* `RestaurantID`: 餐廳唯一識別碼。
-* `RestaurantName`: 餐廳名稱。
-* `ServiceTimeInfo`: 原始的營業時間字串。
-* `ErrorReason`: 無法解析的原因 (例如: "Empty value", "Complex format with multiple specific day times", "No time format (HH:MM) found" 等)。
+### 4.1 空間搜尋 (Spatial Search)
+透過經緯度計算距離，尋找特定座標 (例如使用者目前所在位置) 附近的餐廳。
+* **應用場景**: 「尋找我目前位置 2 公里內的餐廳」。
+* **Cypher 查詢範例**:
+  ```cypher
+  WITH point({latitude: 25.0336, longitude: 121.5650}) AS user_location
+  MATCH (r:Restaurant)
+  WITH r, point.distance(user_location, point({latitude: r.lat, longitude: r.lon})) AS distance
+  WHERE distance < 2000 // 單位為公尺
+  RETURN r.name, r.address, distance
+  ORDER BY distance ASC
+  LIMIT 10
+  ```
 
-人工處理後，即可直接在資料中補上對應的 Mon-Sun 開門與關門時間。
+### 4.2 語意搜尋 (Semantic/Vector Search)
+透過 Neo4j 的向量索引 (Vector Index)，比較使用者輸入的問句向量與餐廳介紹的 `Description_embedding` 相似度。需確保已建立對應的向量索引。
+* **應用場景**: 使用者搜尋「適合情侶約會且氣氛浪漫的高級餐廳」。(需傳入轉換後的問句向量)
+* **Cypher 查詢範例**:
+  ```cypher
+  // $userVector 為前端透過 LLM Embedding API 產生之向量參數
+  CALL db.index.vector.queryNodes('restaurant_description_embedding', 5, $userVector)
+  YIELD node AS r, score
+  RETURN r.name, r.description, score
+  ORDER BY score DESC
+  ```

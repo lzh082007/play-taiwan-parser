@@ -1,118 +1,137 @@
-# 觀光資訊資料庫 - Neo4j 圖形資料庫匯入規範與 Schema (Graph Schema)
+# 觀光資訊資料庫 - 景點 (Attraction) Neo4j 圖形資料庫 Schema
 
-本文件定義了景點資料集經過正規化後，針對 **Neo4j 圖形資料庫 (Graph Database)** 的節點 (Nodes)、關聯 (Relationships) 設計，以及對應的匯入 Cypher 腳本。
+本文件定義了景點資料集針對 **Neo4j 圖形資料庫 (Graph Database)** 的節點 (Nodes) 與關聯 (Relationships) 設計。
+(註：依需求，此版本不包含匯入腳本，僅專注於資料庫結構與串接規範。)
 
-## 1. 圖形資料模型設計 (Graph Data Model)
+## 1. 系統環境與套件需求 (Dependencies & Models)
+為了支援圖形資料庫的匯入與向量檢索 (RAG)，系統需要以下套件與模型：
+- **Neo4j 套件**: `APOC (Awesome Procedures On Cypher)` - 必備，用於進階的資料處理與關聯建立。
+- **Python 套件**: `sentence-transformers`, `torch`
+- **Embedding 模型**: `intfloat/multilingual-e5-large` (1024維) - 將景點介紹文本 (Description) 轉換為向量，供 Neo4j Vector Index 進行語意搜尋。
 
-在關聯式或 Document 資料庫中，我們通常將所有資料塞在同一個 JSON Object。但在 Neo4j 中，為了發揮圖形資料庫的檢索與推薦優勢，我們將實體拆分為不同的節點，並建立關聯。
+## 2. Neo4j 節點欄位定義 (Node Properties)
 
-### 節點 (Nodes) 與 屬性 (Properties)
+以下為景點資料庫在 Neo4j 中的節點與欄位詳細說明。
 
-1. **`(:Attraction)`** - 景點主體
-   - `id` (String, Unique)
-   - `name` (String)
-   - `address` (String)
-   - `description` (String)
-   - `lat` (Float), `lon` (Float)
-   - `parking` (String)
-   - `traffic_info` (String)
-   - `service_time_info` (String)
-   - `web_url` (String)
-   - `reservation_urls` (Array of String)
-   - `update_time` (String)
-   - `embedding` (Array of Float) - 後續由向量模型產出並匯入，供向量檢索使用。
-   - `raw_json` (String) - 序列化為字串的原始 JSON（Neo4j 不支援巢狀 Object 屬性）。
+### 主節點：景點 `(:Attraction)`
+| 欄位名稱 (Property) | 說明 (Description) |
+| :--- | :--- |
+| `id` | 景點唯一識別碼 (Unique, PK) |
+| `name` | 景點名稱 |
+| `description` | 景點介紹 |
+| `lat` | 緯度 |
+| `lon` | 經度 |
+| `address` | 街道地址 |
+| `update_time` | 資料更新時間 |
+| `ticket_info` | 票價資訊 |
+| `travel_info` | 旅遊建議/交通資訊 |
+| `location` | Neo4j 原生空間幾何物件 (Point) |
+| `description_embedding` | 景點介紹的 1024 維向量 (供語意搜尋使用) |
 
-2. **`(:Tag)`** - 標籤
-   - `name` (String, Unique)
+### 關聯節點
+分類與多值屬性在 Neo4j 中會被拆分為獨立節點，並與主節點建立關聯。
 
-3. **`(:AttractionClass)`** - 景點分類
-   - `class_id` (Integer, Unique)
+| 目標節點 (Target Node) | 欄位名稱 (Property) | 建立之關聯 (Relationship) |
+| :--- | :--- | :--- |
+| `(:OperatingHours)` | `dayOfWeek`, `openTime`, `closeTime` | `(Attraction)-[:HAS_OPERATING_HOURS]->(OperatingHours)` |
+| `(:AttractionClass)` | `name` | `(Attraction)-[:HAS_CLASS]->(AttractionClass)` |
+| `(:City)` | `name` | `(Attraction)-[:LOCATED_IN_CITY]->(City)` |
+| `(:Town)` | `name` | `(Attraction)-[:LOCATED_IN_TOWN]->(Town)` |
+| `(:Image)` | `id`, `name`, `url`, `description` | `(Attraction)-[:HAS_IMAGE]->(Image)` |
+| `(:Tag)` | `name` | `(Attraction)-[:HAS_TAG]->(Tag)` |
 
-4. **`(:Image)`** - 圖片
-   - `url` (String, Unique)
-   - `name` (String)
-   - `description` (String)
+## 3. 關聯 (Relationships) 詳細描述
 
-5. **`(:SocialMedia)`** - 社群媒體
-   - `url` (String, Unique)
-   - `name` (String)
+為了讓串接的開發者清楚如何查詢與應用，以下詳細說明節點間的關聯方向與意義。
 
-### 關聯 (Relationships)
-
-- `(a:Attraction)-[:HAS_TAG]->(t:Tag)`
-- `(a:Attraction)-[:BELONGS_TO_CLASS]->(c:AttractionClass)`
-- `(a:Attraction)-[:HAS_IMAGE]->(i:Image)`
-- `(a:Attraction)-[:HAS_SOCIAL_MEDIA]->(s:SocialMedia)`
-
----
-
-## 2. Neo4j 匯入腳本 (Cypher Import Script)
-
-請先確保 Neo4j 已經安裝了 **APOC** 套件。將正規化後的 `AttractionList_Normalized.json` 放置於 Neo4j 的 `import` 目錄下，然後在 Neo4j Browser 執行以下 Cypher 指令：
-
-### 步驟 2.1：建立唯一性約束 (Constraints)
-這能確保資料不重複，並大幅提升匯入效能。
-```cypher
-CREATE CONSTRAINT FOR (a:Attraction) REQUIRE a.id IS UNIQUE;
-CREATE CONSTRAINT FOR (t:Tag) REQUIRE t.name IS UNIQUE;
-CREATE CONSTRAINT FOR (c:AttractionClass) REQUIRE c.class_id IS UNIQUE;
-CREATE CONSTRAINT FOR (i:Image) REQUIRE i.url IS UNIQUE;
-CREATE CONSTRAINT FOR (s:SocialMedia) REQUIRE s.url IS UNIQUE;
+```mermaid
+erDiagram
+    Attraction ||--o{ OperatingHours : "HAS_OPERATING_HOURS"
+    Attraction ||--o{ AttractionClass : "HAS_CLASS"
+    Attraction ||--|| City : "LOCATED_IN_CITY"
+    Attraction ||--|| Town : "LOCATED_IN_TOWN"
+    Town ||--|| City : "PART_OF"
+    Attraction ||--o{ Image : "HAS_IMAGE"
+    Attraction ||--o{ Tag : "HAS_TAG"
 ```
 
-### 步驟 2.2：匯入資料並建立圖形 (APOC Load JSON)
-```cypher
-CALL apoc.load.json("file:///AttractionList_Normalized.json") YIELD value
-// 1. 建立 Attraction 節點
-MERGE (a:Attraction {id: value.id})
-SET a.name = value.name,
-    a.address = value.address,
-    a.description = value.description,
-    a.lat = toFloat(value.lat),
-    a.lon = toFloat(value.lon),
-    a.parking = value.parking,
-    a.traffic_info = value.traffic_info,
-    a.service_time_info = apoc.convert.toJson(value.service_time_info),
-    a.web_url = value.web_url,
-    a.reservation_urls = value.reservation_urls,
-    a.update_time = value.update_time,
-    a.raw_json = value.raw_json
+### `(Attraction)-[:HAS_OPERATING_HOURS]->(OperatingHours)`
+* **說明**: 景點的營業時間。將每週營業日與開關門時間作為獨立節點。
+* **應用場景**: 查詢特定星期、特定時段有開放的景點。
+* **Cypher 查詢範例**:
+  ```cypher
+  MATCH (a:Attraction)-[:HAS_OPERATING_HOURS]->(o:OperatingHours) 
+  WHERE o.dayOfWeek = 'Monday' AND o.openTime <= '14:00:00' AND o.closeTime >= '14:00:00'
+  RETURN a.name
+  ```
 
-// 2. 處理 Tags
-WITH a, value
-UNWIND value.tags AS tagName
-MERGE (t:Tag {name: tagName})
-MERGE (a)-[:HAS_TAG]->(t)
+### `(Attraction)-[:HAS_TAG]->(Tag)`
+* **說明**: 標示景點所具備的特定屬性或特色標籤。
+* **應用場景**: 使用者想尋找具備特定條件的景點。
+* **Cypher 查詢範例**:
+  ```cypher
+  MATCH (a:Attraction)-[:HAS_TAG]->(t:Tag {name: '親子共遊'}) RETURN a.name
+  ```
 
-// 3. 處理 AttractionClasses
-WITH a, value
-UNWIND value.attraction_classes AS classId
-MERGE (c:AttractionClass {class_id: classId})
-MERGE (a)-[:BELONGS_TO_CLASS]->(c)
+### `(Attraction)-[:HAS_CLASS]->(AttractionClass)`
+* **說明**: 景點的官方分類歸屬。
+* **應用場景**: 依據大分類 (如國家公園、自然風景區) 篩選景點。
+* **Cypher 查詢範例**:
+  ```cypher
+  MATCH (a:Attraction)-[:HAS_CLASS]->(c:AttractionClass {name: '國家公園'}) RETURN a.name
+  ```
 
-// 4. 處理 Images
-WITH a, value
-UNWIND value.images AS img
-MERGE (i:Image {url: img.url})
-ON CREATE SET i.name = img.name, i.description = img.description
-MERGE (a)-[:HAS_IMAGE]->(i)
+### `(Attraction)-[:LOCATED_IN_CITY]->(City)`
+* **說明**: 景點所屬的縣市。
+* **應用場景**: 查詢特定縣市內的所有景點。
+* **Cypher 查詢範例**:
+  ```cypher
+  MATCH (a:Attraction)-[:LOCATED_IN_CITY]->(c:City {name: '臺北市'}) RETURN a.name
+  ```
 
-// 5. 處理 Social Media
-WITH a, value
-UNWIND value.social_media_urls AS social
-MERGE (s:SocialMedia {url: social.url})
-ON CREATE SET s.name = social.name
-MERGE (a)-[:HAS_SOCIAL_MEDIA]->(s);
-```
+### `(Attraction)-[:LOCATED_IN_TOWN]->(Town)`
+* **說明**: 景點所屬的鄉鎮市區。Town 節點會進一步透過 `PART_OF` 關聯至 City。
+* **應用場景**: 查詢特定鄉鎮市區內的景點，或追溯所屬縣市。
+* **Cypher 查詢範例**:
+  ```cypher
+  MATCH (a:Attraction)-[:LOCATED_IN_TOWN]->(t:Town {name: '信義區'}) RETURN a.name
+  ```
 
-### 步驟 2.3：建立向量索引 (Vector Index) - 備用
-當您後續把 `embedding` 算出來並更新到 `:Attraction` 節點後，可以建立向量索引以供語意搜尋：
-```cypher
-CREATE VECTOR INDEX attraction_embeddings IF NOT EXISTS
-FOR (a:Attraction) ON (a.embedding)
-OPTIONS {indexConfig: {
-  `vector.dimensions`: 1536, // 依照您的模型維度調整 (如 OpenAI text-embedding-3-small 為 1536)
-  `vector.similarity_function`: 'cosine'
-}};
-```
+### `(Attraction)-[:HAS_IMAGE]->(Image)`
+* **說明**: 景點關聯的相關圖片。一個景點可以有多張圖片。
+* **應用場景**: 在前端介面展示景點的輪播圖。
+* **Cypher 查詢範例**:
+  ```cypher
+  MATCH (a:Attraction {id: 'A1'})-[:HAS_IMAGE]->(i:Image) RETURN i.url, i.name
+  ```
+
+## 4. 進階測試指令集 (Advanced Query Examples)
+
+為了方便串接人員測試進階檢索功能，以下提供**空間搜尋** (Spatial Search) 與**語意搜尋** (Semantic Search) 的 Cypher 指令範例：
+
+### 4.1 空間搜尋 (Spatial Search)
+透過經緯度計算距離，尋找特定座標 (例如使用者目前所在位置) 附近的景點。
+* **應用場景**: 「尋找我附近 5 公里內的景點」。
+* **Cypher 查詢範例**:
+  ```cypher
+  WITH point({latitude: 25.0336, longitude: 121.5650}) AS user_location
+  MATCH (a:Attraction)
+  WHERE a.location IS NOT NULL
+  WITH a, point.distance(user_location, a.location) AS distance
+  WHERE distance < 5000 // 單位為公尺
+  RETURN a.name, distance
+  ORDER BY distance ASC
+  LIMIT 10
+  ```
+
+### 4.2 語意搜尋 (Semantic/Vector Search)
+透過 Neo4j 的向量索引 (Vector Index)，比較使用者輸入的問句向量與景點介紹文本的 `embedding` 相似度。需確保已建立名為 `attraction_description_embedding` 的向量索引。
+* **應用場景**: 使用者搜尋「適合帶小孩放電的戶外大自然景點」。
+* **Cypher 查詢範例**:
+  ```cypher
+  // $userVector 為前端透過 LLM Embedding API 產生之 1024 維向量參數
+  CALL db.index.vector.queryNodes('attraction_description_embedding', 5, $userVector)
+  YIELD node AS a, score
+  RETURN a.name, a.description, score
+  ORDER BY score DESC
+  ```
