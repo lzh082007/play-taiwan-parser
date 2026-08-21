@@ -48,26 +48,49 @@ def clean_address(address, city, town):
         address = address[len(town):]
     return address.strip()
 
-def parse_service_time(time_str):
+def parse_service_time(scraped_record):
     """
-    營業時間統一欄位，包含週一至週日，並考慮一天開放兩個時段。
-    建立預設的 JSON 格式讓後續可以手動填空。
+    將爬蟲抓下來的營業時間，轉換為 Neo4j 所需的統一欄位格式，
+    包含週一至週日，並考慮一天開放兩個時段。
     """
     template = {
-        "Monday": [{"open": "", "close": ""}, {"open": "", "close": ""}],
-        "Tuesday": [{"open": "", "close": ""}, {"open": "", "close": ""}],
-        "Wednesday": [{"open": "", "close": ""}, {"open": "", "close": ""}],
-        "Thursday": [{"open": "", "close": ""}, {"open": "", "close": ""}],
-        "Friday": [{"open": "", "close": ""}, {"open": "", "close": ""}],
-        "Saturday": [{"open": "", "close": ""}, {"open": "", "close": ""}],
-        "Sunday": [{"open": "", "close": ""}, {"open": "", "close": ""}]
+        "Monday": [], "Tuesday": [], "Wednesday": [],
+        "Thursday": [], "Friday": [], "Saturday": [], "Sunday": []
     }
+    
+    if scraped_record:
+        service_times = scraped_record.get("ServiceTimes", [])
+        for st in service_times:
+            days = st.get("ServiceDays", [])
+            start = st.get("StartTime", "")
+            end = st.get("EndTime", "")
+            if start and end:
+                # 轉為 HH:MM 格式
+                start = start[:5] if len(start) >= 5 else start
+                end = end[:5] if len(end) >= 5 else end
+                for day in days:
+                    if day in template:
+                        template[day].append({"open": start, "close": end})
+                        
+    # 確保每天都至少有兩個時段的格式，若沒有則補上空值
+    for day in template:
+        while len(template[day]) < 2:
+            template[day].append({"open": "", "close": ""})
+            
     return template
 
-def process_data(input_file, output_file):
+def process_data(input_file, output_file, updated_times_file):
     print("讀取原始 JSON 資料...")
     with open(input_file, 'r', encoding='utf-8-sig') as f:
         data = json.load(f)
+        
+    print("讀取最新營業時間資料...")
+    service_lookup = {}
+    if os.path.exists(updated_times_file):
+        with open(updated_times_file, 'r', encoding='utf-8') as f:
+            updated_data = json.load(f)
+            for rec in updated_data.get("AttractionServiceTimes", []):
+                service_lookup[rec["AttractionID"]] = rec
     
     attractions = data.get("Attractions", [])
     processed_attractions = []
@@ -82,6 +105,7 @@ def process_data(input_file, output_file):
     for i, a in enumerate(attractions):
         # 複製原始資料以保持大部分欄位不變
         new_a = a.copy()
+        aid = new_a.get("AttractionID")
         
         # 1. 刪除停車資訊
         new_a.pop("ParkingInfo", None)
@@ -117,8 +141,10 @@ def process_data(input_file, output_file):
         else:
             new_a["DescriptionEmbedding"] = None
             
-        # 6. 處理營業時間 (ServiceTimeInfo)
-        new_a["ServiceTimeInfo"] = parse_service_time(new_a.get("ServiceTimeInfo", ""))
+        # 6. 處理營業時間與狀態 (合併爬蟲資料)
+        scraped_record = service_lookup.get(aid, {})
+        new_a["ServiceTimeInfo"] = parse_service_time(scraped_record)
+        new_a["BusinessStatus"] = scraped_record.get("BusinessStatus", "")
             
         processed_attractions.append(new_a)
         
@@ -131,8 +157,9 @@ if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
     input_json = os.path.join(script_dir, r"資料集\AttractionList.json")
     output_json = os.path.join(script_dir, "cleaned_attractions.json")
+    updated_times_json = os.path.join(script_dir, r"資料集\AttractionServiceTimeList_Updated.json")
     
     if os.path.exists(input_json):
-        process_data(input_json, output_json)
+        process_data(input_json, output_json, updated_times_json)
     else:
         print(f"找不到輸入檔案: {input_json}")
