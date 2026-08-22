@@ -24,31 +24,41 @@
    - `update_time` (String)
    - `ticket_info` (String)
    - `travel_info` (String)
-   - `service_time_info` (String)
+   - `business_status` (String) - 營業狀態（例如：正常營業、永久歇業、暫停營業、無提供時間）
    - `description_embedding` (Array of Float) - 1024 維的向量屬性
 
-2. **`(:AttractionClass)`** - 景點分類
+2. **`(:OperatingHours)`** - 營業時間
+   - `dayOfWeek` (String) - 星期（例如：Monday, Tuesday）
+   - `openTime` (String) - 開店時間（例如：08:30）
+   - `closeTime` (String) - 關店時間（例如：17:00）
+
+3. **`(:AttractionClass)`** - 景點分類
    - `name` (String, Unique) - 例如：「森林遊樂區類」、「自然風景類」等
 
-3. **`(:City)`** - 縣市
+4. **`(:City)`** - 縣市
    - `name` (String, Unique)
 
-4. **`(:Town)`** - 鄉鎮市區
+5. **`(:Town)`** - 鄉鎮市區
    - `name` (String, Unique)
 
-5. **`(:Image)`** - 圖片
+6. **`(:Image)`** - 圖片
    - `id` (String, Unique) - 利用 URL 進行 MD5 hash 產生
    - `url` (String)
    - `name` (String)
    - `description` (String)
 
+7. **`(:Tag)`** - 標籤
+   - `name` (String, Unique)
+
 ### 關聯 (Relationships)
 
+- `(a:Attraction)-[:HAS_OPERATING_HOURS]->(o:OperatingHours)`
 - `(a:Attraction)-[:HAS_CLASS]->(c:AttractionClass)`
 - `(a:Attraction)-[:LOCATED_IN_CITY]->(city:City)`
 - `(a:Attraction)-[:LOCATED_IN_TOWN]->(town:Town)`
 - `(town:Town)-[:PART_OF]->(city:City)`
 - `(a:Attraction)-[:HAS_IMAGE]->(i:Image)`
+- `(a:Attraction)-[:HAS_TAG]->(t:Tag)`
 
 ---
 

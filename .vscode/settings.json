@@ -1,0 +1,21 @@
+{
+    "redhat.telemetry.enabled": true,
+    "python.defaultInterpreterPath": "C:\\Users\\lzh08\\AppData\\Local\\Programs\\Python\\Python39\\python.exe",
+    "liveServer.settings.donotVerifyTags": true,
+    "workbench.colorTheme": "Dark+",
+    "git.autofetch": true,
+      "github.copilot.chat.commitMessageGeneration.instructions": [
+    { "text": "必須 100% 使用繁體中文 (zh-TW) 進行輸出。" },
+    { "text": "使用 Conventional Commits 規範：feat: (新增/欄位), fix: (修復), refactor: (重構), chore: (設定/依賴)。" },
+    { "text": "結構必須是 [type]([程式代碼]): [動詞]，[具體變更細節]。例如：'feat(IFAD010F): 更新SQL語句，新增DWVCHM_OPNO欄位的清空操作'。" },
+    { "text": "不要只翻譯程式碼 diff，必須說明『為什麼』與『做了什麼』，並明確寫出涉及的資料庫欄位或變數（如 DWVCHM_OPNO）。" },
+    { "text": "第一行標題盡量控制在 50 個字以內，語氣專業客觀。" }
+  ],
+  "editor.unicodeHighlight.ambiguousCharacters": false,
+  "editor.hover.showLongLineWarning": false,
+  "[xml]": {
+    "editor.defaultFormatter": "DotJoshJohnson.xml"
+  },
+  "xml.server.vmargs": "-Xmx128M",
+  "terminal.integrated.initialHint": false
+}

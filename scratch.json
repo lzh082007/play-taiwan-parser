@@ -1,0 +1,233 @@
+{
+  "AttractionID": "Attraction_345040000G_000001",
+  "AttractionName": "太平山國家森林遊樂區",
+  "AlternateNames": [],
+  "Description": "蹦蹦車、溫泉、高山湖泊、巨木森林與國寶山毛櫸，鋪成了太平山國家森林遊樂區超過百年歷史的綿長軌跡。  太平山舊稱「眠腦」，是泰雅族語「鬱鬱蒼蒼」之意。1914年，日本人先做了資源調查，1915年決議開發。《台灣日日新報》在1936年7月28日報導：「太平山之名乃由現在事務所轉移前，當時主任技師中里氏，將蕃語直譯者。且佐久間總督五年討伐告終，天下歸於太平之意」。所以，「天下太平」才是太平山地名真正的由來，命名者正是踏查先鋒中里正。  海拔2000公尺的太平山，是僅次於阿里山的林業傳奇，1915年日本人開始這裡的伐木事業，後來由國民政府接手，成為台灣最大的林場，最後在1983年轉型為遊樂區，留下見晴鐵道、蹦蹦車等珍貴的遺跡。  人們可以漫步在鎮安宮後的原始林間，讓思緒翱翔在過往巨木滿山的年代。沿著時常遇見台灣獼猴、帝雉等動物的翠峰景觀道路行駛，終點是台灣面積最大高山湖泊，海拔1840公尺的翠峰湖，對岸是國寶台灣山毛櫸的家，秋天可以沿著4公里的步道欣賞滿山金黃耀眼。  收費站不遠處的鳩之澤溫泉，是聞名遐邇的碳酸泉，也是這裏的一大特色。太平山國家森林遊樂區，絕對是喜歡大自然的您，拜訪宜蘭的第一選擇。",
+  "PositionLat": 24.5574676798311,
+  "PositionLon": 121.49949962026885,
+  "Geometry": null,
+  "AttractionClasses": [
+    16
+  ],
+  "PostalAddress": {
+    "City": "宜蘭縣",
+    "CityCode": "10002",
+    "Town": "大同鄉",
+    "TownCode": "10002110",
+    "ZipCode": "267",
+    "StreetAddress": "太平巷58之1號"
+  },
+  "Telephones": [
+    {
+      "Tel": "(03)9770766"
+    },
+    {
+      "Tel": "(03)9809619"
+    },
+    {
+      "Tel": "(03)9809805"
+    },
+    {
+      "Tel": "(03)9809806"
+    },
+    {
+      "Tel": "(03)9809812"
+    },
+    {
+      "Tel": "(03)9809875"
+    },
+    {
+      "Tel": "0910935132"
+    },
+    {
+      "Tel": "0963357199"
+    }
+  ],
+  "Images": [
+    {
+      "Name": "翠峰湖日出",
+      "Description": "照片提供｜宜蘭分署",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/01_%E5%A4%AA%E5%B9%B3%E5%B1%B1%E5%9C%8B%E5%AE%B6%E6%A3%AE%E6%9E%97%E9%81%8A%E6%A8%82%E5%8D%80.jpg",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "雲海",
+      "Description": "照片提供｜宜蘭分署",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/02_BASE_01.jpg",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "瀑布",
+      "Description": "照片提供｜宜蘭分署",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/03_P176-177.jpg",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "鳩之澤",
+      "Description": "照片提供｜宜蘭分署",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/04_%E9%B3%A9%E4%B9%8B%E6%BE%A4%20(1).JPG",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "太平山原始森林公園一隅",
+      "Description": "照片提供｜宜蘭分署",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/05_%E5%A4%AA%E5%B9%B3%E5%B1%B1%E5%8E%9F%E5%A7%8B%E6%A3%AE%E6%9E%97%E5%85%AC%E5%9C%92.JPG",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "白嶺巨木雪景空拍照",
+      "Description": "照片提供｜林維祥",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/06_%E7%99%BD%E5%B6%BA%E5%B7%A8%E6%9C%A8%E9%9B%AA%E6%99%AF%E7%A9%BA%E6%8B%8D%E7%85%A7-%E6%9E%97%E7%B6%AD%E7%A5%A5%E6%94%9D(5).JPG",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "土場-羅東森林鐵路火車",
+      "Description": "照片提供｜石世民",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/07_%E5%9C%9F%E5%A0%B4-%E7%BE%85%E6%9D%B1%E6%A3%AE%E6%9E%97%E9%90%B5%E8%B7%AF%E7%81%AB%E8%BB%8A-%E7%9F%B3%E4%B8%96%E6%B0%91%E6%94%9D.jpg",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "望洋山日出",
+      "Description": "照片提供｜張順能",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/08_%E6%9C%9B%E6%B4%8B%E5%B1%B1%E6%97%A5%E5%87%BA-%E5%BC%B5%E9%A0%86%E8%83%BD%E6%94%9D%20(11).JPG",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "山莊雪景",
+      "Description": "照片提供｜宜蘭分署",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/%E5%B1%B1%E8%8E%8A%E9%9B%AA%E6%99%AF4.jpg",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "山莊雪景",
+      "Description": "照片提供｜宜蘭分署",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/%E5%B1%B1%E8%8E%8A%E9%9B%AA%E6%99%AF9.jpg",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "見晴步道遠望",
+      "Description": "照片提供｜鄭吉延",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/%E5%A4%AA%E5%B9%B3%E5%B1%B1%E5%9C%8B%E5%AE%B6%E6%A3%AE%E6%9E%97%E9%81%8A%E6%A8%82%E5%8D%80%E8%A6%8B%E6%99%B4%E6%AD%A5%E9%81%93%E9%81%A0%E6%9C%9B.jpg",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "毛地黃 搖曳春風中",
+      "Description": "照片提供｜張順能",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/%E6%AF%9B%E5%9C%B0%E9%BB%83%E6%90%96%E6%9B%B3%E6%98%A5%E9%A2%A8%E4%B8%AD-%E5%BC%B5%E9%A0%86%E8%83%BD%E6%94%9D.jpg",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "雪景-翠峰湖全景",
+      "Description": "照片提供｜宜蘭分署",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/%E9%9B%AA%E6%99%AF-%E7%BF%A0%E5%B3%B0%E6%B9%96%E5%85%A8%E6%99%AF.jpg",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "紫葉槭及中央階梯",
+      "Description": "照片提供｜宜蘭分署",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/%E7%B4%AB%E8%91%89%E6%A7%AD%E5%8F%8A%E4%B8%AD%E5%A4%AE%E9%9A%8E%E6%A2%AF.jpg",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "鳩之澤楓紅",
+      "Description": "照片提供｜石世民",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/%E9%B3%A9%E4%B9%8B%E6%BE%A4%E6%A5%93%E7%B4%85-%E7%9F%B3%E4%B8%96%E6%B0%91%E6%94%9D.jpg",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    },
+    {
+      "Name": "翠峰湖全景",
+      "Description": "照片提供｜宜蘭分署",
+      "URL": "https://recreation.forest.gov.tw/Files/Forest/RA/photo/album/0100001/%E7%BF%A0%E5%B3%B0%E6%B9%96%E5%85%A8%E6%99%AF.jpg",
+      "Width": null,
+      "Height": null,
+      "Keywords": []
+    }
+  ],
+  "Organizations": [],
+  "ServiceTimeInfo": "",
+  "TrafficInfo": "［開車前往］從台北出發（經宜蘭交流道）：台北→國道5號→宜蘭(交流道)→省道台7線→省道台7甲線(3.7K)→宜專1線→土場→鳩之澤→太平山。［開車前往］從台北出發（經羅東交流道）：台北→國道5號→羅東(交流道)→省道台7丙線→省道台7線→省道台7甲線(3.7K)→宜專1線→土場→鳩之澤→太平山。［開車前往］從台北出發（經省道台9線(北宜公路)）：台北→省道台9線(北宜公路)→頭城鎮→宜蘭市→省道台7線→省道台7甲線(3.7K)→宜專1線→土場→鳩之澤→太平山［開車前往］從基隆出發：基隆→省道台2線(濱海公路) →壯圍→省道台7線→省道台7甲線(3.7K)→宜專1線→土場→鳩之澤→太平山。［開車前往］從桃園出發：桃園→大溪→省道台7線(北橫公路)→省道台7甲線(3.7K)→宜專1線→土場→鳩之澤→太平山。［開車前往］從花蓮出發：花蓮→省道台9線(蘇花公路)→省道台7丙線→省道台7線→省道台7甲線(3.7K)→宜專1線→土場→鳩之澤→太平山。［大眾運輸］搭乘國光客運：每日行駛(平日:1750 假日:1750A)。旅程時間：約2時30分鐘。電話：宜蘭站03-9384171、羅東站03-9567505。網址：http://www.kingbus.com.tw。購票方式：國光客運臨櫃購票、網路購票及三大超商(7-11、全家及萊爾富)購票。預定當日起15天內車票(含回程訂位) ◎去程(發車時間)：宜蘭07:40、羅東08:00(宜蘭+20分鐘為羅東發車時間) ；抵達太平山10:30。 ◎回程(發車時間)：太平山14:30；鳩之澤16:10，抵達羅東17:30、宜蘭17:50。［大眾運輸］搭乘觀光局台灣觀光巴士：搭乘觀光局台灣觀巴-宜蘭太平山自然之旅一日遊，四人即可成行（提供英、日外語導覽） https://www.taiwantourbus.com.tw/C/tour/tw/yilan-taipingshan-nature-tour［大眾運輸］參加太平山策略聯盟夥伴套裝行程：太平山國家森林遊樂區生態旅遊策略聯盟夥伴，有4家旅行社夥伴，可提供接駁及套裝行程。說明網址：http://goo.gl/BP1YdE",
+  "ParkingInfo": "大型車：100元。小型車：100元。機車：20元。",
+  "Facilities": [],
+  "ServiceStatus": 1,
+  "IsPublicAccess": 1,
+  "IsAccessibleForFree": 0,
+  "FeeInfo": "",
+  "PaymentMethods": [],
+  "LocatedCities": [],
+  "WebsiteURL": "https://recreation.forest.gov.tw/Forest/RA?typ_id=0100001",
+  "ReservationURLs": [
+    "https://forestpass.welcometw.com/tour/listAll?category=p8b"
+  ],
+  "MapURLs": [],
+  "SameAsURLs": [],
+  "SocialMediaURLs": [
+    {
+      "Name": "太平山國家森林遊樂區",
+      "Description": null,
+      "URL": "https://www.facebook.com/tps100.forest",
+      "Keywords": [],
+      "Tags": []
+    },
+    {
+      "Name": "太平山國家森林遊樂區",
+      "Description": null,
+      "URL": "https://www.instagram.com/taipingshan100/",
+      "Keywords": [],
+      "Tags": []
+    },
+    {
+      "Name": "雲煙森林畫太平－太平山國家森林遊樂區",
+      "Description": null,
+      "URL": "https://youtu.be/MzUk6FJKQYE",
+      "Keywords": [],
+      "Tags": []
+    }
+  ],
+  "VisitDuration": null,
+  "AssetsClass": null,
+  "SubAttractions": [],
+  "PartOfAttraction": null,
+  "Tags": [
+    "賞楓",
+    "雲海",
+    "檜木原始林",
+    "溫泉",
+    "台灣山毛櫸",
+    "太平山俱樂部",
+    "翠峰湖",
+    "太平山",
+    "蹦蹦車"
+  ],
+  "Remarks": "",
+  "UpdateTime": "2026-08-14T00:20:42+08:00"
+}

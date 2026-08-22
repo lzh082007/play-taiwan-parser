@@ -146,25 +146,45 @@ def setup_driver():
 def try_click_first_result(driver):
     selectors = [
         "a.hfpxzc",
-        "div[role='feed'] a",
-        "div.Nv2PK a",
         "a[href*='/maps/place/']",
+        "div.Nv2PK a",
+        "div[role='feed'] a"
     ]
     for sel in selectors:
         try:
-            for el in driver.find_elements(By.CSS_SELECTOR, sel):
-                if el.is_displayed():
+            elements = driver.find_elements(By.CSS_SELECTOR, sel)
+            if elements:
+                log.info(f"      [Debug] 找到選擇器 {sel}，數量: {len(elements)}")
+            for el in elements:
+                # 有時候 is_displayed() 判斷會因為畫面滾動等因素回傳 False，
+                # 但透過 JS 強制點擊仍會成功，因此拿掉 is_displayed() 檢查。
+                try:
                     driver.execute_script("arguments[0].click();", el)
-                    WebDriverWait(driver, 5).until(
+                    # 點擊後等待地圖面板載入 (h1)
+                    WebDriverWait(driver, 8).until(
                         EC.presence_of_element_located((By.CSS_SELECTOR, "h1"))
                     )
+                    time.sleep(1) # 確保側邊欄完全展開
                     return True
+                except Exception as e:
+                    pass
         except Exception:
             continue
+    log.info("      [Debug] 畫面上有列表但無法成功點擊或載入 h1")
     return False
 
 
 def extract_hours(driver):
+    try:
+        # 先檢查是否有歇業標籤
+        page_source = driver.page_source
+        if "永久歇業" in page_source:
+            return "PERMANENTLY_CLOSED"
+        if "暫停營業" in page_source:
+            return "TEMPORARILY_CLOSED"
+    except Exception:
+        pass
+
     try:
         for btn in driver.find_elements(By.XPATH,
                 "//*[contains(@aria-label,'營業時間') or contains(@aria-label,'隱藏本週')]"):
@@ -188,10 +208,13 @@ def extract_hours(driver):
 
 def wait_for_place_page(driver):
     try:
+        # 如果是直接跳到地標頁面，會有 h1
         WebDriverWait(driver, 5).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "h1")))
         return True
     except TimeoutException:
+        # 如果停在搜尋結果列表，先稍微等待列表渲染完成
+        time.sleep(2)
         if try_click_first_result(driver):
             return True
         if "sorry/index" in driver.current_url or "consent" in driver.current_url:
@@ -209,6 +232,7 @@ def scrape(driver, name, address=""):
     if cn != name:
         queries.append(cn)
 
+    reached_page = False
     for i, q in enumerate(queries):
         try:
             driver.get(f"https://www.google.com.tw/maps/search/{urllib.parse.quote(q)}")
@@ -216,6 +240,8 @@ def scrape(driver, name, address=""):
                 if i < len(queries) - 1:
                     log.info(f"   策略{i+1}失敗，嘗試下一個...")
                 continue
+            
+            reached_page = True
             time.sleep(1.5)
             hrs = extract_hours(driver)
             if hrs:
@@ -224,6 +250,9 @@ def scrape(driver, name, address=""):
                 return hrs
         except Exception:
             continue
+            
+    if reached_page:
+        return "NO_HOURS"
     return None
 
 
@@ -247,10 +276,11 @@ def main():
     if "AttractionServiceTimes" not in svc_data:
         svc_data["AttractionServiceTimes"] = []
 
-    # 已爬過的 ID（包含有資料的 + 標記為已嘗試的）
     done_ids = set()
     for a in svc_data["AttractionServiceTimes"]:
-        if a.get("ServiceTimes") or a.get("_scraped"):
+        # 條件 1: 確實有抓到營業時間
+        # 條件 2: 已經標記過歇業狀態 (BusinessStatus)
+        if a.get("ServiceTimes") or a.get("BusinessStatus"):
             done_ids.add(a["AttractionID"])
 
     todo = [a for a in attraction_data.get("Attractions", [])
@@ -275,7 +305,7 @@ def main():
             log.info(f"[{i}/{total}] {name} ({aid})")
             hrs = scrape(driver, name, addr)
 
-            if hrs:
+            if isinstance(hrs, list):
                 success += 1
                 log.info(f"   ✅ 成功抓到 {len(hrs)} 筆時段")
                 parsed = parse_hours(hrs)
@@ -285,6 +315,7 @@ def main():
                         rec["ServiceTimes"] = parsed
                         rec["UpdateTime"] = time.strftime("%Y-%m-%dT%H:%M:%S+08:00")
                         rec["_scraped"] = True
+                        rec["_page_reached"] = True
                         found = True
                         break
                 if not found:
@@ -293,16 +324,19 @@ def main():
                         "AttractionName": name,
                         "ServiceTimes": parsed,
                         "UpdateTime": time.strftime("%Y-%m-%dT%H:%M:%S+08:00"),
-                        "_scraped": True
+                        "_scraped": True,
+                        "_page_reached": True
                     })
-            else:
+            elif hrs in ("PERMANENTLY_CLOSED", "TEMPORARILY_CLOSED"):
                 fail += 1
-                log.info(f"   ❌ 三種策略皆失敗")
-                # 標記為已嘗試過，避免重複爬取
+                status_str = "永久歇業" if hrs == "PERMANENTLY_CLOSED" else "暫停營業"
+                log.info(f"   ❌ 已進入景點頁面，狀態顯示為: {status_str}")
                 found = False
                 for rec in svc_data["AttractionServiceTimes"]:
                     if rec["AttractionID"] == aid:
                         rec["_scraped"] = True
+                        rec["BusinessStatus"] = status_str
+                        rec["ServiceTimes"] = []
                         found = True
                         break
                 if not found:
@@ -311,7 +345,47 @@ def main():
                         "AttractionName": name,
                         "ServiceTimes": [],
                         "UpdateTime": time.strftime("%Y-%m-%dT%H:%M:%S+08:00"),
-                        "_scraped": True
+                        "_scraped": True,
+                        "BusinessStatus": status_str
+                    })
+            elif hrs == "NO_HOURS":
+                fail += 1
+                log.info(f"   ❌ 已進入景點頁面，但無營業時間資訊")
+                found = False
+                for rec in svc_data["AttractionServiceTimes"]:
+                    if rec["AttractionID"] == aid:
+                        rec["_scraped"] = True
+                        rec["BusinessStatus"] = "無提供時間"
+                        rec["ServiceTimes"] = []
+                        found = True
+                        break
+                if not found:
+                    svc_data["AttractionServiceTimes"].append({
+                        "AttractionID": aid,
+                        "AttractionName": name,
+                        "ServiceTimes": [],
+                        "UpdateTime": time.strftime("%Y-%m-%dT%H:%M:%S+08:00"),
+                        "_scraped": True,
+                        "BusinessStatus": "無提供時間"
+                    })
+            else:
+                fail += 1
+                log.info(f"   ❌ 無法找到並進入該景點頁面")
+                found = False
+                for rec in svc_data["AttractionServiceTimes"]:
+                    if rec["AttractionID"] == aid:
+                        rec["_scraped"] = True
+                        rec["BusinessStatus"] = ""  # 留空代表沒成功確認過，下次重試
+                        found = True
+                        break
+                if not found:
+                    svc_data["AttractionServiceTimes"].append({
+                        "AttractionID": aid,
+                        "AttractionName": name,
+                        "ServiceTimes": [],
+                        "UpdateTime": time.strftime("%Y-%m-%dT%H:%M:%S+08:00"),
+                        "_scraped": True,
+                        "BusinessStatus": ""
                     })
 
             # 每 SAVE_INTERVAL 筆存檔

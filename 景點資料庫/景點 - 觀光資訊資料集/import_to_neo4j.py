@@ -67,7 +67,8 @@ class AttractionNeo4jImporter:
             attr.address = $address,
             attr.update_time = $update_time,
             attr.ticket_info = $ticket_info,
-            attr.travel_info = $travel_info
+            attr.travel_info = $travel_info,
+            attr.business_status = $business_status
         """
         
         # 若有座標，加入空間地理資料型別 (Point)
@@ -88,6 +89,7 @@ class AttractionNeo4jImporter:
                update_time=a.get("UpdateTime", ""),
                ticket_info=a.get("TicketInfo", ""),
                travel_info=a.get("TravelInfo", ""),
+               business_status=a.get("BusinessStatus", ""),
                desc_emb=a.get("DescriptionEmbedding"))
                
         # 建立 OperatingHours 關聯
