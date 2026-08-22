@@ -1,0 +1,6 @@
+sentence-transformers>=2.2.0
+torch>=2.0.0
+neo4j>=5.0.0
+selenium>=4.0.0
+undetected-chromedriver>=3.5.0
+setuptools
